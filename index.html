@@ -1,0 +1,647 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Ramanujan's Slate - Diagnostic Assessment Engine (Standards 1–8)</title>
+    <script src="https://cdn.jsdelivr.net/npm/@tailwindcss/browser@4"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .radar-container { max-width: 600px; margin: 0 auto; }
+    </style>
+</head>
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans">
+    <!-- Header -->
+    <header class="bg-indigo-700 text-white p-4 shadow-md sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto flex justify-between items-center">
+            <div>
+                <h1 class="text-2xl font-bold flex items-center gap-2">
+                    <span>📐</span> Ramanujan's Slate
+                </h1>
+                <p class="text-xs text-indigo-200">Adaptive Diagnostic Assessment & Spiky Profile Engine (Standards 1–8)</p>
+            </div>
+            <div class="flex items-center gap-3">
+                <div id="userInfoHeader" class="text-right text-sm">
+                    <span class="bg-indigo-800 text-indigo-100 px-3 py-1 rounded-full text-xs font-semibold">Ready for Login</span>
+                </div>
+                <button onclick="toggleTeacherModal()" class="bg-indigo-800 hover:bg-indigo-900 text-indigo-100 px-3 py-1.5 rounded text-xs font-semibold border border-indigo-600 transition">
+                    🔒 Teacher Portal
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto p-4 space-y-6">
+        <!-- Clean Student Login Card -->
+        <section id="studentLoginSection" class="bg-white p-8 rounded-xl shadow-sm border border-slate-200 max-w-xl mx-auto text-center space-y-4">
+            <div class="inline-block bg-indigo-50 text-indigo-700 p-3 rounded-full text-2xl mb-1">🎓</div>
+            <h2 class="text-xl font-bold text-slate-800">Welcome to Ramanujan's Slate</h2>
+            <p class="text-sm text-slate-600">Enter your official Student ID provided by your teacher to start your grade-appropriate diagnostic assessment.</p>
+            <div class="flex gap-2 max-w-md mx-auto pt-2">
+                <input type="text" id="studentIdInput" placeholder="e.g. STU101 or STU808" class="border border-slate-300 rounded-lg px-4 py-2.5 w-full focus:ring-2 focus:ring-indigo-500 outline-none uppercase font-mono text-center text-lg tracking-wider">
+                <button onclick="authenticateStudent()" class="bg-indigo-600 text-white px-6 py-2.5 rounded-lg hover:bg-indigo-700 font-bold shadow-md transition">Start Test</button>
+            </div>
+            <p id="studentLoginError" class="text-xs text-rose-600 font-medium"></p>
+        </section>
+
+        <!-- Assessment Interface Card -->
+        <section id="assessmentSection" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hidden">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center border-b pb-4 mb-6 gap-2">
+                <div>
+                    <h3 id="assessmentTitle" class="text-xl font-bold text-indigo-700">Level Assessment</h3>
+                    <div class="flex items-center gap-2 mt-1">
+                        <span id="badgeStudentName" class="bg-slate-100 text-slate-800 text-xs px-2.5 py-1 rounded font-semibold">Student: --</span>
+                        <span id="badgeStandard" class="bg-indigo-100 text-indigo-800 text-xs px-2.5 py-1 rounded font-semibold">Standard: --</span>
+                        <span id="badgeTierLevel" class="bg-purple-100 text-purple-800 text-xs px-2.5 py-1 rounded font-semibold">Tier: --</span>
+                    </div>
+                </div>
+                <div id="tierInfoBadge" class="text-xs text-slate-500 bg-amber-50 border border-amber-200 p-2 rounded">
+                    ⚠️ Grade-appropriate diagnostic probes loaded.
+                </div>
+            </div>
+
+            <div id="categoriesContainer" class="space-y-8"></div>
+
+            <div class="mt-8 pt-4 border-t flex justify-end">
+                <button onclick="submitAssessment()" class="bg-emerald-600 text-white px-8 py-3 rounded-lg hover:bg-emerald-700 font-bold shadow-md transition text-lg flex items-center gap-2">
+                    <span>✅</span> Submit Assessment & Sync Results
+                </button>
+            </div>
+        </section>
+
+        <!-- Diagnostic Report & Spiky Radar Profile -->
+        <section id="reportSection" class="bg-white p-6 rounded-xl shadow-sm border border-slate-200 hidden space-y-6">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h2 class="text-xl font-bold text-slate-800 flex items-center gap-2">
+                    <span>📊</span> Diagnostic Spiky Profile Report
+                </h2>
+                <button onclick="resetAssessment()" class="bg-slate-100 text-slate-700 text-sm px-4 py-2 rounded hover:bg-slate-200 font-medium">🔄 Return to Home</button>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 items-center">
+                <div>
+                    <h3 class="text-md font-semibold text-slate-700 mb-2 text-center">Category Mastery Radar</h3>
+                    <div class="radar-container bg-slate-50 p-4 rounded-xl border">
+                        <canvas id="spikyRadarChart"></canvas>
+                    </div>
+                </div>
+                <div class="space-y-4">
+                    <div id="scoreCardSummary" class="bg-indigo-50 border border-indigo-200 p-4 rounded-xl"></div>
+                    <div id="categoryBreakdownList" class="space-y-2 max-h-72 overflow-y-auto pr-2"></div>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- Teacher Admin Modal -->
+    <div id="teacherModal" class="fixed inset-0 bg-slate-900/50 backdrop-blur-xs hidden z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-xl max-w-2xl w-full p-6 space-y-6 border border-slate-200">
+            <div class="flex justify-between items-center border-b pb-3">
+                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <span>🔒</span> Teacher Admin Portal & Cloud Sync
+                </h3>
+                <button onclick="toggleTeacherModal()" class="text-slate-400 hover:text-slate-600 font-bold text-lg">✕</button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Roster Source -->
+                <div class="space-y-3 border-r pr-4">
+                    <h4 class="text-sm font-bold text-slate-800">1. Student Roster Source</h4>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Upload Local CSV File</label>
+                        <input type="file" id="csvFileInput" accept=".csv" onchange="handleCSVUpload(event)" class="block w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100 cursor-pointer">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Or Fetch Raw GitHub CSV URL</label>
+                        <div class="flex gap-2">
+                            <input type="text" id="githubUrlInput" placeholder="https://raw.githubusercontent.com/..." class="border border-slate-300 rounded px-2.5 py-1.5 text-xs w-full focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <button onclick="fetchGitHubRoster()" class="bg-slate-700 text-white px-3 py-1.5 rounded text-xs hover:bg-slate-800 font-medium">Fetch</button>
+                        </div>
+                    </div>
+                    <p id="rosterStatus" class="text-xs text-slate-500">Default sample roster pre-loaded (Standards 1 to 8).</p>
+                </div>
+
+                <!-- Zoho Integration -->
+                <div class="space-y-3">
+                    <h4 class="text-sm font-bold text-slate-800">2. Zoho / Webhook Endpoint Sync</h4>
+                    <div>
+                        <label class="block text-xs font-medium text-slate-600 mb-1">Zoho Flow / Creator Webhook URL</label>
+                        <input type="text" id="zohoWebhookInput" placeholder="https://flow.zoho.com/engine/webhook/..." class="border border-slate-300 rounded px-2.5 py-1.5 text-xs w-full focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <p class="text-xs text-slate-400 mt-1">Automatically posts results to your Zoho workspace.</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- End of Day Topper Hall -->
+            <div class="border-t pt-4">
+                <div class="flex justify-between items-center mb-3">
+                    <h4 class="text-sm font-bold text-slate-800">🏆 Student Session Logs & Topper Hall</h4>
+                    <div class="space-x-2">
+                        <button onclick="syncAllToZoho()" class="bg-indigo-600 text-white text-xs px-2.5 py-1.5 rounded hover:bg-indigo-700 font-medium">🚀 Sync to Zoho</button>
+                        <button onclick="exportDailyCSV()" class="bg-slate-800 text-white text-xs px-2.5 py-1.5 rounded hover:bg-slate-900 font-medium">📥 Export CSV</button>
+                        <button onclick="clearSessionLogs()" class="bg-rose-50 text-rose-700 text-xs px-2.5 py-1.5 rounded hover:bg-rose-100 font-medium">🗑️ Clear</button>
+                    </div>
+                </div>
+                <div class="max-h-48 overflow-y-auto border rounded">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-slate-100 text-slate-700 border-b">
+                                <th class="p-2">Name</th>
+                                <th class="p-2">Std</th>
+                                <th class="p-2">Score</th>
+                                <th class="p-2">%</th>
+                                <th class="p-2">Badge</th>
+                            </tr>
+                        </thead>
+                        <tbody id="topperTableBody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="flex justify-end pt-2">
+                <button onclick="toggleTeacherModal()" class="bg-indigo-600 text-white px-4 py-2 rounded text-sm font-semibold hover:bg-indigo-700">Close Portal</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let roster = [
+            { student_id: "STU101", student_name: "Aarav Sharma", grade_level: 1, section: "A" },
+            { student_id: "STU202", student_name: "Diya Patel", grade_level: 2, section: "A" },
+            { student_id: "STU303", student_name: "Karan Kumar", grade_level: 3, section: "B" },
+            { student_id: "STU404", student_name: "Ananya Roy", grade_level: 4, section: "A" },
+            { student_id: "STU505", student_name: "Rohan Iyer", grade_level: 5, section: "B" },
+            { student_id: "STU606", student_name: "Sanya Malhotra", grade_level: 6, section: "A" },
+            { student_id: "STU707", student_name: "Vikas Krishnan", grade_level: 7, section: "B" },
+            { student_id: "STU808", student_name: "Meera Sundaram", grade_level: 8, section: "A" }
+        ];
+
+        let currentStudent = null;
+        let activeCategories = [];
+        let radarChartInstance = null;
+
+        const tier1Categories = [
+            {
+                id: 1, name: "Foundational Number Sense (Std 1-3)",
+                questions: [
+                    { q: "What is the place value of the digit 5 in the number 352?", options: ["5", "50", "500", "2"], correct: "50" },
+                    { q: "Which number is smaller: 482 or 428?", options: ["482", "428", "They are equal", "Cannot be determined"], correct: "428" },
+                    { q: "What comes next in the counting pattern: 15, 20, 25, 30, __?", options: ["32", "35", "40", "45"], correct: "35" },
+                    { q: "What is the expanded form of 408?", options: ["40 + 8", "400 + 8", "400 + 80", "4 + 0 + 8"], correct: "400 + 8" },
+                    { q: "Which of the following numbers is an even number?", options: ["27", "43", "56", "81"], correct: "56" }
+                ]
+            },
+            {
+                id: 2, name: "Primary Addition & Subtraction (Std 1-3)",
+                questions: [
+                    { q: "What is 47 + 28?", options: ["65", "75", "85", "74"], correct: "75" },
+                    { q: "Subtract 34 from 81.", options: ["47", "57", "43", "53"], correct: "47" },
+                    { q: "If you have 56 marbles and give 19 to your friend, how many do you have left?", options: ["37", "47", "35", "45"], correct: "37" },
+                    { q: "What number added to 35 gives 72?", options: ["37", "47", "35", "27"], correct: "37" },
+                    { q: "Solve: 12 + 15 - 9", options: ["16", "18", "21", "24"], correct: "18" }
+                ]
+            },
+            {
+                id: 3, name: "Multiplication & Division Intro (Std 1-3)",
+                questions: [
+                    { q: "What is 6 multiplied by 4?", options: ["18", "24", "28", "30"], correct: "24" },
+                    { q: "Divide 36 objects equally into 4 boxes. How many in each box?", options: ["6", "7", "8", "9"], correct: "9" },
+                    { q: "Which expression means '5 groups of 3'?", options: ["5 + 3", "5 × 3", "5 - 3", "5 ÷ 3"], correct: "5 × 3" },
+                    { q: "What is 7 times 8?", options: ["54", "56", "64", "63"], correct: "56" },
+                    { q: "If 45 sweets are shared equally among 5 children, how many does each get?", options: ["7", "8", "9", "10"], correct: "9" }
+                ]
+            },
+            {
+                id: 4, name: "Shapes & Basic Measurement (Std 1-3)",
+                questions: [
+                    { q: "How many corners (vertices) does a triangle have?", options: ["2", "3", "4", "5"], correct: "3" },
+                    { q: "How many centimeters are in 1 meter?", options: ["10 cm", "100 cm", "1,000 cm", "50 cm"], correct: "100 cm" },
+                    { q: "What shape has 4 equal sides and 4 right angles?", options: ["Rectangle", "Square", "Triangle", "Circle"], correct: "Square" },
+                    { q: "How many hours are in one full day?", options: ["12 hours", "24 hours", "48 hours", "7 days"], correct: "24 hours" },
+                    { q: "Which container holds more water typically?", options: ["A spoon", "A tea cup", "A bucket", "A bottle cap"], correct: "A bucket" }
+                ]
+            }
+        ];
+
+        const tier2Categories = [
+            {
+                id: 1, name: "Multi-Digit Ops & Factors (Std 4-6)",
+                questions: [
+                    { q: "What is the Least Common Multiple (LCM) of 6 and 8?", options: ["12", "18", "24", "48"], correct: "24" },
+                    { q: "What is the Highest Common Factor (HCF) of 24 and 36?", options: ["6", "8", "12", "18"], correct: "12" },
+                    { q: "Which of the following numbers is a prime number?", options: ["33", "39", "41", "51"], correct: "41" },
+                    { q: "Evaluate using order of operations (PEMDAS/BODMAS): 24 ÷ 3 + 5 × 2", options: ["14", "18", "22", "26"], correct: "18" },
+                    { q: "What is the prime factorization of 60?", options: ["2² × 3 × 5", "2 × 3² × 5", "2 × 3 × 5²", "2³ × 5"], correct: "2² × 3 × 5" }
+                ]
+            },
+            {
+                id: 2, name: "Fractions & Decimals (Std 4-6)",
+                questions: [
+                    { q: "Which fraction is equivalent to 3/4?", options: ["6/10", "9/12", "6/9", "8/12"], correct: "9/12" },
+                    { q: "Add: 3/5 + 1/4", options: ["4/9", "7/20", "17/20", "4/20"], correct: "17/20" },
+                    { q: "What is 0.375 expressed as a simplified fraction?", options: ["3/8", "3/5", "5/8", "37/100"], correct: "3/8" },
+                    { q: "Multiply: 2.5 × 1.4", options: ["3.15", "3.50", "2.80", "4.10"], correct: "3.50" },
+                    { q: "Order from least to greatest: 0.4, 3/8, 0.42", options: ["3/8, 0.4, 0.42", "0.4, 3/8, 0.42", "0.42, 0.4, 3/8", "3/8, 0.42, 0.4"], correct: "3/8, 0.4, 0.42" }
+                ]
+            },
+            {
+                id: 3, name: "Area, Perimeter & Volume (Std 4-6)",
+                questions: [
+                    { q: "What is the volume of a rectangular prism with length 5cm, width 4cm, and height 3cm?", options: ["12 cu cm", "20 cu cm", "60 cu cm", "47 cu cm"], correct: "60 cu cm" },
+                    { q: "What is the area of a triangle with base 10cm and height 8cm?", options: ["80 sq cm", "40 sq cm", "20 sq cm", "18 sq cm"], correct: "40 sq cm" },
+                    { q: "If the radius of a circle is 7 cm, what is its circumference? (Use π = 22/7)", options: ["22 cm", "44 cm", "154 cm", "88 cm"], correct: "44 cm" },
+                    { q: "Convert 4,500 milliliters into liters.", options: ["0.45 L", "4.5 L", "45 L", "450 L"], correct: "4.5 L" },
+                    { q: "What is the total surface area of a cube whose edge is 5 cm?", options: ["125 sq cm", "100 sq cm", "150 sq cm", "75 sq cm"], correct: "150 sq cm" }
+                ]
+            },
+            {
+                id: 4, name: "Ratio, Proportion & Data (Std 4-6)",
+                questions: [
+                    { q: "If 4 notebooks cost ₹160, how much do 7 notebooks cost?", options: ["₹240", "₹280", "₹320", "₹300"], correct: "₹280" },
+                    { q: "What is 25% of 360?", options: ["75", "80", "90", "100"], correct: "90" },
+                    { q: "Find the average (mean) of the numbers: 12, 15, 18, 22, 28", options: ["18", "19", "20", "21"], correct: "19" },
+                    { q: "Express 3/5 as a percentage.", options: ["60%", "75%", "35%", "50%"], correct: "60%" },
+                    { q: "If a train travels 240 km in 4 hours, what is its average speed?", options: ["50 km/h", "55 km/h", "60 km/h", "65 km/h"], correct: "60 km/h" }
+                ]
+            }
+        ];
+
+        const tier3Categories = [
+            {
+                id: 1, name: "Integers & Rational Numbers (Std 7-8)",
+                questions: [
+                    { q: "Evaluate: (-15) - (-8)", options: ["-23", "-7", "7", "23"], correct: "-7" },
+                    { q: "What is the product of (-4) × 5 × (-2)?", options: ["-40", "40", "-20", "20"], correct: "40" },
+                    { q: "Which rational number lies exactly halfway between -1 and -2?", options: ["-1.25", "-1.5", "-1.75", "-1.2"], correct: "-1.5" },
+                    { q: "Simplify the expression: -36 ÷ (-9) + 4", options: ["-8", "0", "8", "12"], correct: "8" },
+                    { q: "What is the multiplicative inverse (reciprocal) of -5/8?", options: ["5/8", "8/5", "-8/5", "-5/8"], correct: "-8/5" }
+                ]
+            },
+            {
+                id: 2, name: "Algebra & Linear Equations (Std 7-8)",
+                questions: [
+                    { q: "Solve for x: 3x - 5 = 16", options: ["x = 5", "x = 7", "x = 8", "x = 9"], correct: "x = 7" },
+                    { q: "Simplify completely: 5x + 3y - 2x + 4y", options: ["3x + 7y", "7x + 7y", "3x - y", "3x + y"], correct: "3x + 7y" },
+                    { q: "If a = 3 and b = -2, what is the value of 4a - 3b?", options: ["6", "12", "18", "24"], correct: "18" },
+                    { q: "Solve for y: 2(y + 4) = 18", options: ["y = 5", "y = 7", "y = 9", "y = 11"], correct: "y = 5" },
+                    { q: "What is the slope of the linear equation y = 4x - 7?", options: ["-7", "4", "-4", "7"], correct: "4" }
+                ]
+            },
+            {
+                id: 3, name: "Geometry, Slope & Pythagorean (Std 7-8)",
+                questions: [
+                    { q: "In a right-angled triangle, if the two legs are 6 cm and 8 cm, what is the length of the hypotenuse?", options: ["9 cm", "10 cm", "12 cm", "14 cm"], correct: "10 cm" },
+                    { q: "What is the sum of all interior angles of a pentagon (5-sided polygon)?", options: ["360°", "540°", "720°", "900°"], correct: "540°" },
+                    { q: "If two complementary angles are in the ratio 2:3, what is the measure of the smaller angle?", options: ["36°", "54°", "18°", "72°"], correct: "36°" },
+                    { q: "What is the area of a circle with radius 7 cm? (Use π = 22/7)", options: ["154 sq cm", "88 sq cm", "44 sq cm", "308 sq cm"], correct: "154 sq cm" },
+                    { q: "If the exterior angle of a triangle is 110° and one interior opposite angle is 45°, what is the other interior opposite angle?", options: ["55°", "65°", "75°", "85°"], correct: "65°" }
+                ]
+            },
+            {
+                id: 4, name: "Data Handling & Probability (Std 7-8)",
+                questions: [
+                    { q: "What is the probability of getting a prime number when a standard 6-sided die is rolled?", options: ["1/6", "2/6", "3/6", "4/6"], correct: "3/6" },
+                    { q: "What is the median of the data set: 12, 7, 15, 9, 22?", options: ["11", "12", "13", "15"], correct: "12" },
+                    { q: "If a bag contains 3 red, 4 blue, and 5 green marbles, what is the probability of drawing a blue marble?", options: ["1/3", "1/4", "4/12", "Both 1/3 and 4/12"], correct: "Both 1/3 and 4/12" },
+                    { q: "Find the mode of the data set: 4, 7, 2, 7, 9, 4, 7, 5.", options: ["4", "5", "7", "9"], correct: "7" },
+                    { q: "What is the probability of an impossible event happening?", options: ["1", "0.5", "0", "Not defined"], correct: "0" }
+                ]
+            }
+        ];
+
+        function toggleTeacherModal() {
+            const modal = document.getElementById('teacherModal');
+            modal.classList.toggle('hidden');
+            renderTopperHall();
+        }
+
+        function parseCSVText(text) {
+            const lines = text.split('\n').filter(l => l.trim().length > 0);
+            let newRoster = [];
+            for (let i = 1; i < lines.length; i++) {
+                const cols = lines[i].split(',').map(c => c.trim().replace(/^"|"$/g, ''));
+                if (cols.length >= 3) {
+                    newRoster.push({
+                        student_id: cols[0],
+                        student_name: cols[1],
+                        grade_level: parseInt(cols[2]),
+                        section: cols[3] || 'A'
+                    });
+                }
+            }
+            return newRoster;
+        }
+
+        function handleCSVUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const newRoster = parseCSVText(e.target.result);
+                if (newRoster.length > 0) {
+                    roster = newRoster;
+                    document.getElementById('rosterStatus').innerText = `Successfully loaded ${roster.length} students from CSV!`;
+                } else {
+                    alert("Could not parse CSV file. Ensure format: student_id, student_name, grade_level, section");
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        async function fetchGitHubRoster() {
+            const url = document.getElementById('githubUrlInput').value.trim();
+            if (!url) {
+                alert("Please enter a raw GitHub CSV URL.");
+                return;
+            }
+            try {
+                const response = await fetch(url);
+                if (!response.ok) throw new Error("HTTP error " + response.status);
+                const text = await response.text();
+                const newRoster = parseCSVText(text);
+                if (newRoster.length > 0) {
+                    roster = newRoster;
+                    document.getElementById('rosterStatus').innerText = `Fetched ${roster.length} students directly from GitHub URL!`;
+                } else {
+                    alert("Parsed 0 students from GitHub CSV URL.");
+                }
+            } catch (err) {
+                alert("Error fetching GitHub roster: " + err.message);
+            }
+        }
+
+        function authenticateStudent() {
+            const idInput = document.getElementById('studentIdInput').value.trim().toUpperCase();
+            const errEl = document.getElementById('studentLoginError');
+            errEl.innerText = '';
+
+            const found = roster.find(s => s.student_id.toUpperCase() === idInput);
+            if (!found) {
+                errEl.innerText = "Student ID not found in roster. Please check ID or ask your teacher.";
+                return;
+            }
+            currentStudent = found;
+
+            let tierNum = 1;
+            if (currentStudent.grade_level >= 1 && currentStudent.grade_level <= 3) {
+                tierNum = 1;
+                activeCategories = tier1Categories;
+            } else if (currentStudent.grade_level >= 4 && currentStudent.grade_level <= 6) {
+                tierNum = 2;
+                activeCategories = tier2Categories;
+            } else {
+                tierNum = 3;
+                activeCategories = tier3Categories;
+            }
+
+            document.getElementById('badgeStudentName').innerText = `Student: ${currentStudent.student_name}`;
+            document.getElementById('badgeStandard').innerText = `Standard: ${currentStudent.grade_level}`;
+            document.getElementById('badgeTierLevel').innerText = `Tier ${tierNum} (Std ${tierNum === 1 ? '1–3' : tierNum === 2 ? '4–6' : '7–8'})`;
+            document.getElementById('tierInfoBadge').innerText = `✅ Loaded Tier ${tierNum} question bank for Standard ${currentStudent.grade_level}.`;
+
+            document.getElementById('userInfoHeader').innerHTML = `<span class="bg-indigo-800 text-indigo-100 px-3 py-1 rounded-full text-xs font-semibold">${currentStudent.student_name} (Std ${currentStudent.grade_level})</span>`;
+
+            renderAssessmentForm();
+            document.getElementById('studentLoginSection').classList.add('hidden');
+            document.getElementById('assessmentSection').classList.remove('hidden');
+            document.getElementById('reportSection').classList.add('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function renderAssessmentForm() {
+            const container = document.getElementById('categoriesContainer');
+            container.innerHTML = '';
+
+            activeCategories.forEach((cat) => {
+                let catDiv = document.createElement('div');
+                catDiv.className = "border border-slate-200 rounded-xl p-5 bg-slate-50/50 shadow-xs";
+                
+                let html = `<h4 class="text-md font-bold text-indigo-900 mb-3 flex items-center gap-2">
+                    <span class="bg-indigo-600 text-white w-6 h-6 rounded-full flex items-center justify-center text-xs">${cat.id}</span>
+                    ${cat.name}
+                </h4>`;
+
+                cat.questions.forEach((qObj, qIdx) => {
+                    html += `<div class="mb-4 bg-white p-4 rounded-lg border border-slate-200">
+                        <p class="font-medium text-slate-800 text-sm mb-2">Q${qIdx + 1}. ${qObj.q}</p>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">`;
+                    
+                    qObj.options.forEach(opt => {
+                        let safeOpt = opt.replace(/"/g, '&quot;');
+                        html += `<label class="flex items-center space-x-2 p-2.5 rounded border border-slate-200 hover:bg-indigo-50 cursor-pointer text-sm bg-white">
+                            <input type="radio" name="cat_${cat.id}_q_${qIdx}" value="${safeOpt}" class="text-indigo-600 focus:ring-indigo-500">
+                            <span class="text-slate-700">${opt}</span>
+                        </label>`;
+                    });
+                    html += `</div></div>`;
+                });
+
+                catDiv.innerHTML = html;
+                container.appendChild(catDiv);
+            });
+        }
+
+        async function postToZohoWebhook(payload) {
+            const webhookUrl = document.getElementById('zohoWebhookInput').value.trim();
+            if (!webhookUrl) return;
+            try {
+                await fetch(webhookUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+            } catch (e) {
+                console.error("Zoho Webhook Error:", e);
+            }
+        }
+
+        function submitAssessment() {
+            let totalCorrect = 0;
+            let totalQuestions = activeCategories.reduce((acc, cat) => acc + cat.questions.length, 0);
+            let categoryScores = [];
+
+            activeCategories.forEach(cat => {
+                let catCorrect = 0;
+                cat.questions.forEach((qObj, qIdx) => {
+                    const selected = document.querySelector(`input[name="cat_${cat.id}_q_${qIdx}"]:checked`);
+                    if (selected && selected.value.trim() === qObj.correct.trim()) {
+                        catCorrect++;
+                    }
+                });
+                totalCorrect += catCorrect;
+                let percentage = Math.round((catCorrect / cat.questions.length) * 100);
+                categoryScores.push({ name: cat.name, correct: catCorrect, total: cat.questions.length, percentage });
+            });
+
+            let overallPercentage = Math.round((totalCorrect / totalQuestions) * 100);
+            let badge = overallPercentage >= 85 ? "🌟 High-Ability Math Star" : overallPercentage >= 60 ? "👍 Proficient Builder" : "📚 Developing Learner";
+
+            let submissionResult = {
+                student_id: currentStudent.student_id,
+                student_name: currentStudent.student_name,
+                grade_level: currentStudent.grade_level,
+                section: currentStudent.section,
+                totalCorrect,
+                totalQuestions,
+                overallPercentage,
+                badge,
+                categoryScores,
+                timestamp: new Date().toLocaleTimeString()
+            };
+
+            let logs = JSON.parse(localStorage.getItem('ramanujan_slate_logs') || '[]');
+            logs = logs.filter(l => l.student_id !== currentStudent.student_id);
+            logs.push(submissionResult);
+            localStorage.setItem('ramanujan_slate_logs', JSON.stringify(logs));
+
+            postToZohoWebhook(submissionResult);
+
+            displayReport(submissionResult);
+
+            document.getElementById('studentLoginSection').classList.add('hidden');
+            document.getElementById('assessmentSection').classList.add('hidden');
+            document.getElementById('reportSection').classList.remove('hidden');
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function displayReport(res) {
+            document.getElementById('scoreCardSummary').innerHTML = `
+                <div class="flex justify-between items-center">
+                    <div>
+                        <h4 class="font-bold text-indigo-900 text-lg">${res.student_name} (Std ${res.grade_level})</h4>
+                        <p class="text-sm text-indigo-700">Status: <b>${res.badge}</b></p>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-3xl font-extrabold text-indigo-700">${res.overallPercentage}%</span>
+                        <p class="text-xs text-slate-500">${res.totalCorrect} / ${res.totalQuestions} Correct</p>
+                    </div>
+                </div>
+            `;
+
+            let breakdownHtml = '<h4 class="font-semibold text-slate-700 mb-2">Category Performance Breakdown:</h4>';
+            res.categoryScores.forEach(c => {
+                let colorClass = c.percentage >= 80 ? 'bg-emerald-100 text-emerald-800' : c.percentage >= 50 ? 'bg-amber-100 text-amber-800' : 'bg-rose-100 text-rose-800';
+                breakdownHtml += `<div class="flex justify-between items-center p-2 rounded bg-white border text-sm">
+                    <span class="font-medium text-slate-700">${c.name}</span>
+                    <span class="px-2 py-0.5 rounded text-xs font-bold ${colorClass}">${c.correct}/${c.total} (${c.percentage}%)</span>
+                </div>`;
+            });
+            document.getElementById('categoryBreakdownList').innerHTML = breakdownHtml;
+
+            renderRadarChart(res.categoryScores);
+        }
+
+        function renderRadarChart(scores) {
+            const ctx = document.getElementById('spikyRadarChart').getContext('2d');
+            if (radarChartInstance) radarChartInstance.destroy();
+
+            radarChartInstance = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: scores.map(s => s.name),
+                    datasets: [{
+                        label: 'Mastery %',
+                        data: scores.map(s => s.percentage),
+                        backgroundColor: 'rgba(99, 102, 241, 0.25)',
+                        borderColor: 'rgb(79, 70, 229)',
+                        pointBackgroundColor: 'rgb(79, 70, 229)',
+                        borderWidth: 2
+                    }]
+                },
+                options: {
+                    scales: { 
+                        r: { 
+                            min: 0, 
+                            max: 100, 
+                            ticks: { stepSize: 25 },
+                            pointLabels: {
+                                font: { size: 11, weight: 'bold' },
+                                color: '#334155'
+                            }
+                        } 
+                    },
+                    plugins: { legend: { display: false } }
+                }
+            });
+        }
+
+        function renderTopperHall() {
+            let logs = JSON.parse(localStorage.getItem('ramanujan_slate_logs') || '[]');
+            logs.sort((a, b) => b.overallPercentage - a.overallPercentage || b.totalCorrect - a.totalCorrect);
+
+            let tbody = document.getElementById('topperTableBody');
+            tbody.innerHTML = '';
+
+            if (logs.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="p-3 text-center text-slate-500">No student logs yet today.</td></tr>`;
+                return;
+            }
+
+            logs.forEach((log) => {
+                let tr = document.createElement('tr');
+                tr.className = "border-b hover:bg-slate-50";
+                tr.innerHTML = `
+                    <td class="p-2 font-semibold text-slate-900">${log.student_name}</td>
+                    <td class="p-2 text-slate-600">Std ${log.grade_level}</td>
+                    <td class="p-2 text-slate-600 font-mono">${log.totalCorrect}/${log.totalQuestions}</td>
+                    <td class="p-2 font-bold text-indigo-700">${log.overallPercentage}%</td>
+                    <td class="p-2"><span class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-semibold">${log.badge}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+        }
+
+        async function syncAllToZoho() {
+            let logs = JSON.parse(localStorage.getItem('ramanujan_slate_logs') || '[]');
+            const webhookUrl = document.getElementById('zohoWebhookInput').value.trim();
+            if (!webhookUrl) {
+                alert("Please enter your Zoho Webhook URL first in the admin settings.");
+                return;
+            }
+            if (logs.length === 0) {
+                alert("No assessment logs found to sync.");
+                return;
+            }
+            for (let log of logs) {
+                await postToZohoWebhook(log);
+            }
+            alert(`Pushed ${logs.length} student records to Zoho Webhook!`);
+        }
+
+        function exportDailyCSV() {
+            let logs = JSON.parse(localStorage.getItem('ramanujan_slate_logs') || '[]');
+            if (logs.length === 0) {
+                alert("No session logs found to export.");
+                return;
+            }
+            let csvContent = "data:text/csv;charset=utf-8,student_id,student_name,grade_level,section,total_correct,total_questions,percentage,badge,timestamp\n";
+            logs.forEach(l => {
+                csvContent += `${l.student_id},"${l.student_name}",${l.grade_level},${l.section},${l.totalCorrect},${l.totalQuestions},${l.overallPercentage},"${l.badge}","${l.timestamp}"\n`;
+            });
+            let encodedUri = encodeURI(csvContent);
+            let link = document.createElement("a");
+            link.setAttribute("href", encodedUri);
+            link.setAttribute("download", "ramanujan_slate_daily_results.csv");
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        }
+
+        function clearSessionLogs() {
+            if (confirm("Clear all session logs?")) {
+                localStorage.removeItem('ramanujan_slate_logs');
+                renderTopperHall();
+            }
+        }
+
+        function resetAssessment() {
+            document.getElementById('studentIdInput').value = '';
+            document.getElementById('studentLoginSection').classList.remove('hidden');
+            document.getElementById('assessmentSection').classList.add('hidden');
+            document.getElementById('reportSection').classList.add('hidden');
+            document.getElementById('userInfoHeader').innerHTML = `<span class="bg-indigo-800 text-indigo-100 px-3 py-1 rounded-full text-xs font-semibold">Ready for Login</span>`;
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+    </script>
+</body>
+</html>
