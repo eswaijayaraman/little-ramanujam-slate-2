@@ -1,0 +1,9 @@
+student_id,student_name,grade_level,section,roll_number,enrolled_modules
+STU101,Aarav Sharma,1,A,101,Number Sense; Basic Addition
+STU202,Diya Patel,2,A,102,Addition & Subtraction; Patterns
+STU303,Karan Kumar,3,B,103,Multiplication Intro; Spatial Geometry
+STU404,Ananya Roy,4,A,104,Multi-Digit Ops; Fractions Basics
+STU505,Rohan Iyer,5,B,105,Factors & Multiples; Decimals
+STU606,Sanya Malhotra,6,A,106,Rational Numbers; Ratio & Proportion
+STU707,Vikas Krishnan,7,B,107,Linear Equations; Integers
+STU808,Meera Sundaram,8,A,108,Linear Functions; Data & Probability
