@@ -1,6 +1,4 @@
 student_id,student_name,grade_level,section
-STU101,Pradyumna.K,1,A
-STU102,Junaid Ibrahim,1,A
 STU103,Sharpin.R,1,A
 STU104,Aadhithya,1,B
 STU105,P.Sideeksha,1,B
@@ -21,5 +19,4 @@ STU302,Sathyasree,3,A
 STU303,Sai mithra,3,A
 STU304,Nikshithasri,3,B
 STU305,Devainiyan,3,B
-STU306,Mukilan,3,B
-STU307,RADESH,3,B
+STU306,Mukilan,3,A
